@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
-import { startServer } from '../src/server/server.ts';
+import { Hub, startServer } from '../src/server/server.ts';
 
 type Msg = any;
 
@@ -395,4 +395,12 @@ test('host clock over real sockets: the host stays on the result table, the firs
     for (const c of clients) c.ws?.terminate();
     await srv.close();
   }
+});
+
+test('Hub.sweepRooms drops an abandoned room and its timers', async () => {
+  const hub = new Hub({ roomIdleMs: 0 });
+  const { room } = hub.manager.createRoom('s1', '房主');
+  assert.deepEqual(hub.sweepRooms(), [room.roomId]);
+  assert.equal(hub.manager.rooms.size, 0);
+  hub.close();
 });

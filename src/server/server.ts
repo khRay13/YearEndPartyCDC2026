@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import { GameError } from '../engine/game.ts';
 import type { TurnRecord } from '../engine/game.ts';
-import { RoomManager, TURN_TIME_MS } from './rooms.ts';
+import { RoomManager, ROOM_IDLE_MS, TURN_TIME_MS } from './rooms.ts';
 import type { Room } from './rooms.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -28,6 +28,10 @@ export interface HubOptions {
   /** Grace period before an offline human's turn is auto-played. */
   offlineGraceMs?: number;
   turnTimeMs?: number;
+  /** Rooms with nobody connected are removed after this much inactivity (default 30 minutes). */
+  roomIdleMs?: number;
+  /** How often the room sweep runs (default 1 minute). */
+  sweepMs?: number;
 }
 
 interface Conn {
@@ -40,6 +44,7 @@ export class Hub {
   private conns = new Map<string, Set<Conn>>();
   private timers = new Map<string, NodeJS.Timeout>();
   private saveTimer: NodeJS.Timeout | null = null;
+  private sweepTimer: NodeJS.Timeout | null = null;
   private opts: Required<Omit<HubOptions, 'stateFile'>> & { stateFile?: string };
 
   constructor(opts: HubOptions = {}) {
@@ -50,8 +55,12 @@ export class Hub {
       fastDelayMs: opts.fastDelayMs ?? 12,
       offlineGraceMs: opts.offlineGraceMs ?? 3000,
       turnTimeMs: opts.turnTimeMs ?? TURN_TIME_MS,
+      roomIdleMs: opts.roomIdleMs ?? ROOM_IDLE_MS,
+      sweepMs: opts.sweepMs ?? 60_000,
     };
     this.manager = new RoomManager({ hostReturnMs: opts.hostReturnMs });
+    this.sweepTimer = setInterval(() => this.sweepRooms(), this.opts.sweepMs);
+    this.sweepTimer.unref();
     if (this.opts.stateFile && existsSync(this.opts.stateFile)) {
       try {
         this.manager.load(JSON.parse(readFileSync(this.opts.stateFile, 'utf8')));
@@ -67,6 +76,22 @@ export class Hub {
         console.error('[hub] failed to restore state:', e);
       }
     }
+  }
+
+  // ---- room recycling ----------------------------------------------------
+
+  /** Drop closed / abandoned rooms together with their timers; persists when something was removed. */
+  sweepRooms(): string[] {
+    const removed = this.manager.sweep((sid) => this.isConnected(sid), this.opts.roomIdleMs);
+    for (const id of removed) {
+      for (const m of [this.timers, this.hostTimers, this.broadcastTimers]) {
+        const t = m.get(id);
+        if (t) clearTimeout(t);
+        m.delete(id);
+      }
+    }
+    if (removed.length) this.persist();
+    return removed;
   }
 
   // ---- connections -------------------------------------------------------
@@ -409,6 +434,7 @@ export class Hub {
   }
 
   close(): void {
+    if (this.sweepTimer) clearInterval(this.sweepTimer);
     for (const t of this.timers.values()) clearTimeout(t);
     this.timers.clear();
     for (const t of this.broadcastTimers.values()) clearTimeout(t);

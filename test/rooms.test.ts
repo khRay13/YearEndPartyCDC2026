@@ -760,3 +760,30 @@ test('the host clock and the queue survive a restart', () => {
   assert.equal(m2.checkHostSuccession(r2), true);
   assert.equal(r2.hostUid, x.B);
 });
+
+test('room recycling: abandoned rooms vanish after the idle time, occupied ones never do', () => {
+  let t = 1_000_000;
+  const m = new RoomManager({ now: () => t });
+  const a = m.createRoom('sA', '甲').room; // everyone left the page
+  const b = m.createRoom('sB', '乙').room; // somebody still connected
+  const online = new Set(['sB']);
+  const is = (sid: string | null) => !!sid && online.has(sid);
+  t += 29 * 60_000;
+  assert.deepEqual(m.sweep(is, 30 * 60_000), [], 'not idle long enough yet');
+  t += 2 * 60_000;
+  assert.deepEqual(m.sweep(is, 30 * 60_000), [a.roomId]);
+  assert.ok(!m.rooms.has(a.roomId) && !m.sessions.has('sA'), 'room and its cookie binding are gone');
+  assert.ok(m.rooms.has(b.roomId) && m.sessions.has('sB'), 'a room with a connected human is kept however quiet');
+  online.delete('sB');
+  t += 31 * 60_000;
+  assert.deepEqual(m.sweep(is, 30 * 60_000), [b.roomId]);
+});
+
+test('room recycling: a CLOSED room is removed at once, and its number can be reused', () => {
+  const m = new RoomManager();
+  const { room } = m.createRoom('s1', '房主');
+  m.leave('s1'); // last human leaves -> CLOSED
+  assert.equal(m.rooms.get(room.roomId)?.status, 'CLOSED');
+  assert.deepEqual(m.sweep(() => true), [room.roomId]);
+  assert.equal(m.rooms.size, 0);
+});

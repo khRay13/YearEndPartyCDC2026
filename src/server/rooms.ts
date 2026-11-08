@@ -95,6 +95,8 @@ export const BOT_NAMES = [
 ];
 
 export const TURN_TIME_MS = 30_000;
+/** A room nobody is connected to is thrown away after this long without activity. */
+export const ROOM_IDLE_MS = 30 * 60_000;
 const MAX_EVENTS = 400;
 
 export class RoomManager {
@@ -687,6 +689,25 @@ export class RoomManager {
   private lastShotCard(g: Game): { suit: string; rank: number } | null {
     const rec = g.history[g.history.length - 1];
     return rec && rec.roundNumber === g.roundNumber && rec.thirdCard ? rec.thirdCard : null;
+  }
+
+  // ---- room recycling ----------------------------------------------------
+
+  /**
+   * Remove rooms that are CLOSED, or that have had no connected human and no activity for `idleMs`.
+   * Returns the removed room ids (so the caller can drop their timers).
+   */
+  sweep(isConnected: (sid: string | null) => boolean, idleMs: number = ROOM_IDLE_MS): string[] {
+    const removed: string[] = [];
+    for (const [id, room] of this.rooms) {
+      const anyoneOnline = room.players.some((p) => !p.isBot && isConnected(p.sid));
+      const idle = !anyoneOnline && this.now() - room.updatedAt >= idleMs;
+      if (room.status !== 'CLOSED' && !idle) continue;
+      this.rooms.delete(id);
+      for (const [sid, b] of this.sessions) if (b.roomId === id) this.sessions.delete(sid);
+      removed.push(id);
+    }
+    return removed;
   }
 
   // ---- persistence -------------------------------------------------------
