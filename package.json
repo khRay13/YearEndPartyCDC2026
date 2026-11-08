@@ -1,0 +1,23 @@
+{
+  "name": "year-end-party-gate-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server/server.ts",
+    "dev": "node --watch src/server/server.ts",
+    "test": "node --test test/",
+    "rwd": "node scripts/rwd-check.mjs",
+    "stability": "node scripts/stability-check.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "puppeteer-core": "^24.10.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
