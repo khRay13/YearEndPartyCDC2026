@@ -345,7 +345,7 @@ input { -webkit-user-select: text; user-select: text; }
 .lobbycols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; margin-bottom: 12px; }
 .lobbycols > .panel { margin-bottom: 0; }
 @media (min-width: 900px) {
-  .lobbycols { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  .lobbycols { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); /* side by side: players 40%, chat 60% */ }
   .lobbycols > .chatbox { position: sticky; top: 12px; } /* stays in view while a long player list scrolls */
   .lobbycols .chatlog { height: min(55vh, 420px); }
 }
