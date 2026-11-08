@@ -411,6 +411,11 @@ export class RoomManager {
     room.updatedAt = this.now();
   }
 
+  /** Humans who could take over as host: here in the waiting room, not kicked, not the host. Computers never inherit. */
+  private heirs(room: Room): RoomPlayer[] {
+    return room.players.filter((p) => !p.isBot && !p.kicked && p.uid !== room.hostUid && isBack(p));
+  }
+
   /** When the countdown next has something to do (an announcement, or the end); null when it is not running. */
   nextStartTickAt(room: Room): number | null {
     if (!this.inLobby(room) || !room.startDeadline) return null;
@@ -426,7 +431,7 @@ export class RoomManager {
     if (!this.inLobby(room) || !room.startDeadline) return false;
     const now = this.now();
     if (now >= room.startDeadline) {
-      const pool = room.players.filter((p) => !p.isBot && !p.kicked && p.uid !== room.hostUid && isBack(p));
+      const pool = this.heirs(room);
       const online = pool.filter((p) => isConnected(p.uid));
       const cands = online.length ? online : pool;
       if (!cands.length) {
@@ -452,7 +457,12 @@ export class RoomManager {
     if (!due.length) return false;
     const t = Math.min(...due); // several can be overdue after a hiccup: announce only the current one
     room.startRemind = t;
-    this.systemSay(room, t >= 60 ? `⏱ 開局倒數：還有 ${t / 60} 分鐘，時間到會自動換房主` : `⏱ 開局倒數 ${t}`);
+    // the words say what will really happen: another human to hand the room to, or nobody (only the host is a
+    // person, computers do not count) and the room is recycled
+    const recycle = this.heirs(room).length === 0;
+    this.systemSay(room, recycle
+      ? (t >= 60 ? `⚠ 還有 ${t / 60} 分鐘沒有開始遊戲，房間即將回收` : `⚠ 房間即將回收 ${t}`)
+      : (t >= 60 ? `⏱ 開局倒數：還有 ${t / 60} 分鐘，時間到會自動換房主` : `⏱ 開局倒數 ${t}`));
     return true;
   }
 
