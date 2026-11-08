@@ -357,12 +357,32 @@ function updateLobby() {
     const stick = L.chatKey === '' || el.scrollHeight - el.scrollTop - el.clientHeight < 28;
     L.chatKey = key;
     el.replaceChildren(...(chat.length
-      ? chat.map((c) => h('div', { class: 'chatmsg' + (c.uid === s.me ? ' mine' : '') + (c.uid === 'system' ? ' sys' : '') }, h('b', {}, c.nickname), '：', c.text)) // text nodes only: never HTML
+      ? chat.map((c) => h('div', { class: 'chatmsg' + (c.uid === s.me ? ' mine' : '') + (c.uid === 'system' ? ' sys' : '') }, nameTag(c, s), h('span', { class: 'ts' }, ` [${clockTime(c.ts)}]`), ': ', c.text)) // text nodes only: never HTML
       : [h('div', { class: 'muted' }, '還沒有人說話，打個招呼吧')]));
     if (stick) el.scrollTop = el.scrollHeight;
   }
   L.hint.textContent = iAmHost ? '' : '等待房主開始遊戲…';
   tickLobby();
+}
+
+/** Chat name colours: one per player (join order, the same for everybody); orange is kept for System. */
+const CHAT_COLORS = ['#7ec8ff', '#ff8fb1', '#9be37a', '#c9a0ff', '#ffe27a', '#5fe0d0', '#ff7a7a', '#a8b8ff', '#d6f06a', '#ff9ff3', '#8fe3b0', '#bfc9d6'];
+function chatColor(uid, players) {
+  let i = players.findIndex((p) => p.uid === uid);
+  if (i < 0) { i = 0; for (const ch of String(uid)) i = (i * 31 + ch.charCodeAt(0)) >>> 0; } // someone who already left: stable by hash
+  return CHAT_COLORS[i % CHAT_COLORS.length];
+}
+
+/** The author of a chat line: System is a black badge with a white border and orange text; players get their own colour. */
+function nameTag(c, s) {
+  if (c.uid === 'system') return h('b', { class: 'sysname' }, c.nickname);
+  return h('b', { class: 'pname', style: 'color:' + chatColor(c.uid, s.players) }, c.nickname);
+}
+
+/** HH:MM:SS (24-hour) in the viewer's own time zone: the server sends a UTC timestamp. */
+function clockTime(ts) {
+  const d = new Date(ts);
+  return [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':');
 }
 
 /** The host is still on the result table: count down to the moment the room passes to the first player back. */

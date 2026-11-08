@@ -209,6 +209,7 @@ export class RoomManager {
     room.players.push({ uid, nickname: nick, isBot: false, kicked: false, sid });
     this.sessions.set(sid, { roomId: room.roomId, uid });
     this.refreshStatus(room);
+    this.announce(room, `${nick} 已加入`);
     this.emit(room, 'PLAYER_JOINED', { uid, nickname: nick });
     return { room, uid };
   }
@@ -227,6 +228,7 @@ export class RoomManager {
       this.emit(room, 'PLAYER_LEFT', { uid });
       return room;
     }
+    this.announce(room, `${seated.nickname} 已退出`);
     this.removePlayer(room, uid);
     this.sessions.delete(sid);
     this.emit(room, 'PLAYER_LEFT', { uid });
@@ -264,6 +266,7 @@ export class RoomManager {
       this.emit(room, 'ROOM_UPDATED', { kicked: targetUid });
       return room;
     }
+    this.announce(room, `${target.nickname} 已被踢除`);
     this.removePlayer(room, targetUid);
     if (target.sid) {
       room.bannedSids.push(target.sid);
@@ -296,6 +299,7 @@ export class RoomManager {
     if (!target) throw new GameError('UNKNOWN_PLAYER', '玩家不存在');
     if (target.isBot) throw new GameError('BOT_CANNOT_OBSERVE', '電腦玩家不能設為觀察者');
     if (target.uid === room.hostUid) throw new GameError('HOST_CANNOT_OBSERVE', '房主必須參賽');
+    if (!!target.observer !== !!observer) this.announce(room, observer ? `${target.nickname} 現在是觀眾` : `${target.nickname} 已重新參戰`);
     target.observer = !!observer;
     this.refreshStatus(room);
     this.emit(room, 'ROOM_UPDATED', { uid: targetUid, observer: !!observer });
@@ -395,6 +399,11 @@ export class RoomManager {
     room.startRemind = 9999;
   }
 
+  /** A join / leave / kick / observer notice in the waiting-room chat (the chat only exists in the waiting room). */
+  private announce(room: Room, text: string): void {
+    if (this.inLobby(room)) this.systemSay(room, text);
+  }
+
   /** An automatic announcement in the waiting-room chat, authored by System. */
   private systemSay(room: Room, text: string): void {
     room.chat.push({ seq: ++room.chatSeq, uid: SYSTEM_UID, nickname: SYSTEM_NAME, text, ts: this.now() });
@@ -421,8 +430,13 @@ export class RoomManager {
       const online = pool.filter((p) => isConnected(p.uid));
       const cands = online.length ? online : pool;
       if (!cands.length) {
-        this.armStart(room); // nobody to hand the room to: the countdown just starts over
-        return false;
+        // Only the host is left (computers do not count): time is up, the host is sent out and the room is recycled.
+        const host = room.players.find((p) => p.uid === room.hostUid);
+        if (host?.sid) this.sessions.delete(host.sid);
+        room.startDeadline = null;
+        room.status = 'CLOSED';
+        this.emit(room, 'ROOM_UPDATED', { closed: true, reason: 'start-timeout' });
+        return true;
       }
       const next = cands[Math.floor(this.rng() * cands.length)]!;
       room.hostUid = next.uid;
@@ -492,6 +506,7 @@ export class RoomManager {
     const uid = this.newUid();
     room.players.push({ uid, nickname, isBot: true, kicked: false, sid: null });
     this.refreshStatus(room);
+    this.announce(room, `${nickname} 已加入`);
     this.emit(room, 'PLAYER_JOINED', { uid, nickname, isBot: true });
     return room;
   }
@@ -882,6 +897,8 @@ export class RoomManager {
       this.sessions.delete(sid);
       return;
     }
+    const gone = b.room.players.find((x) => x.uid === b.uid);
+    if (gone) this.announce(b.room, `${gone.nickname} 已退出`);
     this.removePlayer(b.room, b.uid);
     this.sessions.delete(sid);
     this.afterRemoval(b.room, b.uid);

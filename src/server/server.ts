@@ -392,8 +392,13 @@ export class Hub {
       room.roomId,
       setTimeout(() => {
         this.startTimers.delete(room.roomId);
-        if (this.manager.tickStart(room, (uid) => this.isConnected(room.players.find((p) => p.uid === uid)?.sid ?? null))) this.after(room);
-        else this.scheduleStartTimer(room);
+        const hostSid = room.players.find((p) => p.uid === room.hostUid)?.sid ?? null;
+        if (!this.manager.tickStart(room, (uid) => this.isConnected(room.players.find((p) => p.uid === uid)?.sid ?? null))) return this.scheduleStartTimer(room);
+        if (room.status === 'CLOSED') {
+          // nobody else was left: the host is sent home and the room goes through the normal recycling
+          for (const c of this.conns.get(hostSid ?? '') ?? []) this.sendTo(c, { t: 'state', state: null, notice: '開局時間到，房間已關閉' });
+          this.sweepRooms();
+        } else this.after(room);
       }, Math.max(0, at - Date.now())),
     );
   }
