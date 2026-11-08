@@ -285,6 +285,16 @@ input { -webkit-user-select: text; user-select: text; }
 
 /* waiting room: deck choice (single choice) */
 .deckpick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.opts { display: flex; flex-wrap: wrap; gap: 0 28px; } /* wide screens: deck choice and consecutive-posts choice share one line */
+.opts > .deckpick { flex: 0 1 auto; }
+.roomline { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.roomlabel, .deckpick > .muted { font-weight: 700; font-size: 18px; color: var(--text, inherit); } /* 房號 / 牌組 / 連號門柱 labels share one size */
+.phead { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 2px 12px; margin-bottom: 8px; }
+.phead h3 { margin: 0; }
+.startnote { padding: 3px 10px; border-radius: 999px; font-weight: 800; font-size: 14px; white-space: nowrap; } /* solid chips, same row as the title */
+.startnote.ok { color: #06281b; background: #5fe0a0; }
+.startnote.wait { color: #fff; background: #d6342c; }
+.phead .count { font-size: 13px; margin-left: auto; text-align: right; }
 .radio { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 255, 255, .06); cursor: pointer; }
 .radio.on { border-color: var(--gold); background: rgba(242, 193, 78, .16); }
 .radio.ro { cursor: default; opacity: .85; }

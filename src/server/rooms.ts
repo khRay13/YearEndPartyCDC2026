@@ -55,6 +55,8 @@ export interface Room {
   roomId: string;
   /** 52-card decks the host chose in the waiting room: 1 (default) or 2. */
   deckCopies: number;
+  /** Host option: may two posts of consecutive rank be dealt? */
+  allowConsecutive: boolean;
   /** Waiting-room chat (text only). */
   chat: ChatMessage[];
   chatSeq: number;
@@ -71,6 +73,8 @@ export interface Room {
   bannedSids: string[];
   createdAt: number;
   updatedAt: number;
+  /** While the clock is before this, fast-forward is held off so the shot that knocked out the last human plays in full (transient). */
+  fastHoldUntil?: number;
   /** When the current turn's clock starts (after reveal animation pause). */
   turnStartAt: number;
   events: GameEvent[];
@@ -149,6 +153,7 @@ export class RoomManager {
     const room: Room = {
       roomId,
       deckCopies: 1,
+      allowConsecutive: true,
       chat: [],
       chatSeq: 0,
       resultGame: null,
@@ -383,6 +388,15 @@ export class RoomManager {
     return room;
   }
 
+  /** Host decides whether consecutive-rank posts may be dealt; only before the game starts. */
+  setAllowConsecutive(sid: string, allow: boolean): Room {
+    const { room } = this.requireHost(sid);
+    if (room.status !== 'WAITING' && room.status !== 'READY') throw new GameError('BAD_STATE', '遊戲已開始，無法更改設定');
+    room.allowConsecutive = !!allow;
+    this.emit(room, 'ROOM_UPDATED', { allowConsecutive: room.allowConsecutive });
+    return room;
+  }
+
   /** Host picks how many decks (1 or 2) the match is played with; only before the game starts. */
   setDeckCopies(sid: string, copies: number): Room {
     const { room } = this.requireHost(sid);
@@ -462,7 +476,7 @@ export class RoomManager {
       const j = Math.floor(this.rng() * (i + 1));
       [order[i], order[j]] = [order[j]!, order[i]!];
     }
-    room.game = new Game(order.map((p) => ({ uid: p.uid, nickname: p.nickname })), { rng: this.rng, dealerUid: active.some((p) => p.uid === room.hostUid) ? room.hostUid : active[0]!.uid, deckCopies: room.deckCopies ?? 1 });
+    room.game = new Game(order.map((p) => ({ uid: p.uid, nickname: p.nickname })), { rng: this.rng, dealerUid: active.some((p) => p.uid === room.hostUid) ? room.hostUid : active[0]!.uid, deckCopies: room.deckCopies ?? 1, allowConsecutive: room.allowConsecutive ?? true });
     room.status = 'PLAYING';
     room.turnStartAt = this.now() + 1500;
     this.emit(room, 'GAME_STARTED', { order: order.map((p) => p.uid) });
@@ -593,6 +607,7 @@ export class RoomManager {
       roomId: room.roomId,
       status,
       deckCopies: room.deckCopies ?? 1,
+      allowConsecutive: room.allowConsecutive ?? true,
       // the chat lives in the waiting room only
       chat: (status === 'WAITING' || status === 'READY') ? room.chat.slice(-CHAT_SHOWN) : [],
       // the host has not come back yet: the clock until the room passes to the first player who did
@@ -672,6 +687,7 @@ export class RoomManager {
   isFastForward(room: Room): boolean {
     const g = room.game;
     if (!g || g.status !== 'PLAYING') return false;
+    if (room.fastHoldUntil && this.now() < room.fastHoldUntil) return false;
     // observers are not players: when only they are left watching, the computers still play it out quickly
     return !room.players.some((p) => !p.isBot && !p.observer && !p.kicked && !p.left && !g.player(p.uid).eliminated);
   }
@@ -723,7 +739,7 @@ export class RoomManager {
     this.rooms.clear();
     this.sessions.clear();
     for (const r of data.rooms) {
-      const room: Room = { ...r, deckCopies: r.deckCopies ?? 1, chat: r.chat ?? [], chatSeq: r.chatSeq ?? 0, backOrder: r.backOrder ?? [], lobbyDeadline: r.lobbyDeadline ?? null, game: r.game ? Game.restore(r.game, { rng: this.rng }) : null, resultGame: r.resultGame ? Game.restore(r.resultGame, { rng: this.rng }) : null };
+      const room: Room = { ...r, deckCopies: r.deckCopies ?? 1, allowConsecutive: r.allowConsecutive ?? true, chat: r.chat ?? [], chatSeq: r.chatSeq ?? 0, backOrder: r.backOrder ?? [], lobbyDeadline: r.lobbyDeadline ?? null, game: r.game ? Game.restore(r.game, { rng: this.rng }) : null, resultGame: r.resultGame ? Game.restore(r.resultGame, { rng: this.rng }) : null };
       delete (room as unknown as { passwordHash?: string }).passwordHash; // passwords were removed
       this.rooms.set(room.roomId, room);
     }

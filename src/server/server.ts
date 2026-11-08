@@ -231,6 +231,10 @@ export class Hub {
         this.after(m.setDeckCopies(sid, Number(msg.copies)));
         break;
       }
+      case 'setConsecutive': {
+        this.after(m.setAllowConsecutive(sid, msg.allow === true));
+        break;
+      }
       case 'addBot': {
         this.after(m.addBot(sid));
         break;
@@ -265,12 +269,22 @@ export class Hub {
   private afterRecord(room: Room, rec: TurnRecord): void {
     const p = this.opts.pauseMs;
     // Extra time for the "eliminated" notice and for collecting + reshuffling + re-dealing the gate.
-    const fast = this.manager.isFastForward(room);
+    // The turn that knocks out the last live human is still played in full (animation, notices); only after it
+    // do the computers start to fast-forward.
+    let fast = this.manager.isFastForward(room);
+    if (fast && !this.fastRooms.has(room.roomId)) {
+      this.fastRooms.add(room.roomId);
+      room.fastHoldUntil = Date.now() + (rec.action === 'SHOOT' ? p.shot : p.pass) + (rec.eliminated ? p.extra : 0) + (rec.roundEnded ? p.extra * 2 : 0) + (rec.isAllIn ? p.extra : 0);
+      fast = false;
+    } else if (!fast && !(room.fastHoldUntil && Date.now() < room.fastHoldUntil)) this.fastRooms.delete(room.roomId);
     const pause = fast ? 0 : (rec.action === 'SHOOT' ? p.shot : p.pass) + (rec.eliminated ? p.extra : 0) + (rec.roundEnded ? p.extra * 2 : 0) + (rec.isAllIn ? p.extra : 0);
     room.turnStartAt = Date.now() + pause;
     this.schedule(room);
     this.after(room);
   }
+
+  /** Rooms that are (or were just switched to) fast-forward, to spot the moment the last human drops out. */
+  private fastRooms = new Set<string>();
 
   private isComputer(room: Room, uid: string): boolean {
     const p = room.players.find((x) => x.uid === uid);

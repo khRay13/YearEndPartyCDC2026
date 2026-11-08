@@ -306,16 +306,19 @@ function updateLobby() {
   const watchers = s.players.filter((p) => p.isObserver).length;
 
   fill(L.info, 
-    h('div', { class: 'muted' }, '房間號碼（把號碼告訴朋友，輸入號碼即可加入）'),
-    plate(s.roomId),
+    h('div', { class: 'roomline', title: '把號碼告訴朋友，輸入號碼即可加入' }, h('span', { class: 'roomlabel' }, '房號：'), plate(s.roomId)),
+    h('div', { class: 'opts' },
     h('div', { class: 'deckpick', role: 'radiogroup', 'aria-label': '牌組' },
       h('span', { class: 'muted' }, '牌組'),
       [1, 2].map((d) => h('label', { class: 'radio' + (s.deckCopies === d ? ' on' : '') + (iAmHost ? '' : ' ro') },
         h('input', { type: 'radio', name: 'deck', value: String(d), checked: s.deckCopies === d, disabled: !iAmHost, onchange: () => send({ t: 'setDeck', copies: d }) }),
         `${d} 副牌（${52 * d} 張）`))),
-    !iAmHost && h('div', { class: 'muted' }, '牌組由房主決定'),
-    h('div', { class: 'muted', style: 'margin-top:8px' },
-      `參賽 ${seated.length} 人${watchers ? `・觀察 ${watchers} 人` : ''}${reading ? `・還在看結算 ${reading} 人` : ''}（共 ${n} / ${s.maxPlayers}）　${seated.length < s.minPlayers ? '至少需要 2 位參賽玩家才能開始' : '可以開始了'}`),
+    h('div', { class: 'deckpick', role: 'radiogroup', 'aria-label': '連號門柱' },
+      h('span', { class: 'muted' }, '連號門柱'),
+      [true, false].map((v) => h('label', { class: 'radio' + (s.allowConsecutive === v ? ' on' : '') + (iAmHost ? '' : ' ro') },
+        h('input', { type: 'radio', name: 'consec', value: String(v), checked: s.allowConsecutive === v, disabled: !iAmHost, onchange: () => send({ t: 'setConsecutive', allow: v }) }),
+        v ? '允許（會出現）' : '不允許（重抽）')))),
+    !iAmHost && h('div', { class: 'muted' }, '牌組與連號門柱由房主決定'),
     reading > 0 && iAmHost && h('div', { class: 'muted' }, '還在看結算的人若來不及按「再玩一局」，開始後會成為觀察者'));
 
   fill(L.controls, 
@@ -324,7 +327,14 @@ function updateLobby() {
     h('button', { onclick: () => send({ t: 'leave' }) }, '離開房間'));
 
   fill(L.players, 
-    h('h3', {}, '玩家'),
+    h('div', { class: 'phead' },
+      h('h3', {}, '玩家'),
+      h('span', { class: 'startnote ' + (seated.length >= s.minPlayers ? 'ok' : 'wait'), role: 'status' },
+        seated.length >= s.minPlayers
+          ? (iAmHost ? '✔ 可以開始' : '✔ 等房主開始')
+          : `✖ 還差 ${s.minPlayers - seated.length} 人才能開始`),
+      h('span', { class: 'muted count' },
+        `參賽 ${seated.length} 人${watchers ? `・觀察 ${watchers}` : ''}${reading ? `・看結算 ${reading}` : ''}・${n}/${s.maxPlayers}`)),
     h('ul', { class: 'plist' }, s.players.map((p) =>
       h('li', { class: p.isObserver ? 'observer' : '' },
         h('span', { class: 'dot ' + (p.connected ? 'on' : '') }),
@@ -337,7 +347,7 @@ function updateLobby() {
         iAmHost && !p.isHost && !p.isBot && h('label', { class: 'obsbox' },
           h('input', { type: 'checkbox', checked: p.isObserver, 'aria-label': `把 ${p.nickname} 設為觀察者`, onchange: (e) => send({ t: 'setObserver', uid: p.uid, observer: e.target.checked }) }),
           '觀察'),
-        iAmHost && p.uid !== s.me && h('button', { class: 'small danger', onclick: () => confirm(`剔除 ${p.nickname}？`) && send({ t: 'kick', uid: p.uid }) }, '剔除')))));
+        iAmHost && p.uid !== s.me && h('button', { class: 'small danger', onclick: () => (p.isBot || confirm(`剔除 ${p.nickname}？`)) && send({ t: 'kick', uid: p.uid }) }, '剔除')))));
 
   // chat log: only touched when something new arrived, and it keeps following the bottom unless you scrolled up
   const chat = s.chat || [];

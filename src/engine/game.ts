@@ -141,10 +141,13 @@ export interface GameOptions {
   chipLockAtPercent?: readonly number[];
   /** How many 52-card decks are shuffled together: 1 (default) or 2. */
   deckCopies?: number;
+  /** Whether two posts of consecutive rank (8 and 9) may be dealt. Default true; false redraws them. */
+  allowConsecutive?: boolean;
 }
 
 export interface GameSnapshot {
   deckCopies?: number;
+  allowConsecutive?: boolean;
   players: PlayerState[];
   order: string[];
   status: 'PLAYING' | 'FINISHED';
@@ -185,6 +188,8 @@ export class Game {
   private chipLockAt: readonly number[] = CHIP_LOCK_AT_PERCENT;
   /** 52-card decks shuffled together this game (1 or 2). */
   deckCopies = 1;
+  /** Consecutive-rank gates are dealt (true) or redrawn (false). */
+  allowConsecutive = true;
   private shuffler: (deck: Card[]) => Card[];
   private turnIdx = 0;
   private turnCounter = 0;
@@ -199,6 +204,7 @@ export class Game {
     const copies = opts.deckCopies ?? 1;
     if (!(DECK_OPTIONS as readonly number[]).includes(copies)) throw new GameError('BAD_DECK', '牌組只能是 1 副或 2 副');
     this.deckCopies = copies;
+    this.allowConsecutive = opts.allowConsecutive ?? true;
     this.chipLockAt = opts.chipLockAtPercent ?? CHIP_LOCK_AT_PERCENT_BY_DECKS[copies]!;
     this.shuffler = opts.shuffler ?? ((d) => shuffle(d, this.rng));
     this.players = players.map((p) => ({
@@ -262,6 +268,7 @@ export class Game {
   snapshot(): GameSnapshot {
     return structuredClone({
       deckCopies: this.deckCopies,
+      allowConsecutive: this.allowConsecutive,
       players: this.players,
       order: this.order,
       status: this.status,
@@ -284,6 +291,7 @@ export class Game {
     g.rng = opts.rng ?? Math.random;
     g.shuffler = opts.shuffler ?? ((deck) => shuffle(deck, g.rng));
     Object.assign(g, d);
+    g.allowConsecutive = d.allowConsecutive ?? true;
     g.deckCopies = d.deckCopies ?? 1; // snapshots from before the deck option existed were single-deck
     g.chipLockAt = opts.chipLockAtPercent ?? CHIP_LOCK_AT_PERCENT_BY_DECKS[g.deckCopies]!;
     g.dealerUid ??= g.order[0]!;
@@ -566,7 +574,8 @@ export class Game {
 
   /**
    * Shuffle a fresh deck and draw two gate cards (spec 5.4). Only equal ranks are thrown away and redrawn.
-   * Consecutive ranks (8 and 9: two posts and no goal between them) ARE allowed on purpose: nobody can hit,
+   * Consecutive ranks (8 and 9: two posts and no goal between them) are allowed by default (the host can switch
+   * that off in the waiting room, then they are redrawn too): nobody can hit,
    * so such a round only ends in a miss or a collision, and the pot can be pumped up to wipe out whoever
    * collides.
    */
@@ -577,7 +586,9 @@ export class Game {
       const a = this.deck.shift();
       const b = this.deck.shift();
       if (!a || !b) throw new GameError('DECK_EXHAUSTED', '牌堆不足以建立龍門');
-      if (a.rank !== b.rank) return [a, b];
+      if (a.rank === b.rank) continue;
+      if (!this.allowConsecutive && Math.abs(a.rank - b.rank) === 1) continue;
+      return [a, b];
     }
   }
 }
