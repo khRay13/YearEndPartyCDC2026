@@ -270,7 +270,7 @@ let chatDraft = '';
 
 function buildLobby() {
   L.info = h('div', { class: 'panel' });
-  L.controls = h('div', { class: 'row', style: 'margin-bottom:12px' });
+  L.controls = h('div', { class: 'row ctlrow', style: 'margin-bottom:12px' });
   L.players = h('div', { class: 'panel' });
   L.chatLog = h('div', { class: 'chatlog', role: 'log', 'aria-live': 'polite', 'aria-label': '聊天室訊息' });
   L.chatInput = h('input', {

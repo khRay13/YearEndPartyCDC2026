@@ -304,6 +304,9 @@ input { -webkit-user-select: text; user-select: text; }
 .row > button { white-space: nowrap; }
 @media (max-width: 480px) { .row > .primary.grow { flex: 1 1 100%; } }
 
+/* waiting-room buttons: unchanged when they share a line; on phones (where they wrap) the two under 開始遊戲 split that line equally */
+@media (max-width: 480px) { .ctlrow > button:not(.primary) { flex: 1 1 0; } }
+
 /* waiting room: observers, wins, chat */
 .plist li { flex-wrap: wrap; row-gap: 6px; }
 .plist li .who { flex: 1 1 8em; min-width: 0; overflow-wrap: anywhere; }
