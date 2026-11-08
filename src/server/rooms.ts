@@ -39,6 +39,13 @@ export interface ChatMessage {
 /** The host has this long to come back to the waiting room after the first other player did (spec 3.4.3). */
 export const HOST_RETURN_MS = 5 * 60 * 1000;
 
+/** The host has this long to start the game; then the host role passes to a random player who is here. */
+export const START_LIMIT_MS = 5 * 60 * 1000;
+/** Seconds left at which the System account announces the countdown in the chat: every minute, then the last 10 seconds. */
+export const START_REMIND_AT = [240, 180, 120, 60, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1] as const;
+/** The chat author for automatic announcements. Players cannot use this name (see cleanNickname). */
+export const SYSTEM_UID = 'system';
+export const SYSTEM_NAME = 'System';
 export const CHAT_MAX_LENGTH = 200;
 export const CHAT_MIN_INTERVAL_MS = 700;
 const CHAT_KEEP = 100;
@@ -66,6 +73,10 @@ export interface Room {
   backOrder: string[];
   /** When the host loses the room to the first player who came back; null when nobody is waiting on the host. */
   lobbyDeadline: number | null;
+  /** When the waiting-room countdown ends and the host role is handed to a random player; null outside the waiting room. */
+  startDeadline: number | null;
+  /** Smallest START_REMIND_AT value already announced in this countdown (9999 = none yet). */
+  startRemind: number;
   hostUid: string;
   status: RoomStatus;
   players: RoomPlayer[];
@@ -113,8 +124,10 @@ export class RoomManager {
   private lastChatAt = new Map<string, number>();
 
   private hostReturnMs: number;
+  private startLimitMs: number;
 
-  constructor(opts: { rng?: Rng; now?: () => number; hostReturnMs?: number } = {}) {
+  constructor(opts: { rng?: Rng; now?: () => number; hostReturnMs?: number; startLimitMs?: number } = {}) {
+    this.startLimitMs = opts.startLimitMs ?? START_LIMIT_MS;
     this.rng = opts.rng ?? Math.random;
     this.now = opts.now ?? Date.now;
     this.hostReturnMs = opts.hostReturnMs ?? HOST_RETURN_MS;
@@ -159,6 +172,8 @@ export class RoomManager {
       resultGame: null,
       backOrder: [],
       lobbyDeadline: null,
+      startDeadline: null,
+      startRemind: 9999,
       hostUid: uid,
       status: 'WAITING',
       players: [{ uid, nickname: nick, isBot: false, kicked: false, sid }],
@@ -172,6 +187,7 @@ export class RoomManager {
       seenActions: [],
     };
     this.rooms.set(roomId, room);
+    this.armStart(room);
     this.sessions.set(sid, { roomId, uid });
     this.emit(room, 'PLAYER_JOINED', { uid, nickname: nick });
     return { room, uid };
@@ -323,6 +339,7 @@ export class RoomManager {
       room.turnStartAt = 0;
       room.status = 'WAITING';
       room.lobbyDeadline = uid === room.hostUid ? null : this.now() + this.hostReturnMs;
+      this.armStart(room);
     }
     me.back = true;
     if (!room.backOrder.includes(uid)) room.backOrder.push(uid);
@@ -361,7 +378,67 @@ export class RoomManager {
     if (!next) return false;
     room.hostUid = next.uid;
     if (next.observer) next.observer = false; // the host always plays
+    this.armStart(room);
     this.emit(room, 'ROOM_UPDATED', { newHost: next.uid, reason: 'host-timeout' });
+    return true;
+  }
+
+  // ---- waiting-room start countdown --------------------------------------
+
+  private inLobby(room: Room): boolean {
+    return room.status === 'WAITING' || room.status === 'READY';
+  }
+
+  /** (Re)start the countdown: the host has START_LIMIT_MS to begin the game. */
+  private armStart(room: Room): void {
+    room.startDeadline = this.inLobby(room) ? this.now() + this.startLimitMs : null;
+    room.startRemind = 9999;
+  }
+
+  /** An automatic announcement in the waiting-room chat, authored by System. */
+  private systemSay(room: Room, text: string): void {
+    room.chat.push({ seq: ++room.chatSeq, uid: SYSTEM_UID, nickname: SYSTEM_NAME, text, ts: this.now() });
+    if (room.chat.length > CHAT_KEEP) room.chat.splice(0, room.chat.length - CHAT_KEEP);
+    room.updatedAt = this.now();
+  }
+
+  /** When the countdown next has something to do (an announcement, or the end); null when it is not running. */
+  nextStartTickAt(room: Room): number | null {
+    if (!this.inLobby(room) || !room.startDeadline) return null;
+    const next = START_REMIND_AT.find((t) => t < room.startRemind);
+    return next === undefined ? room.startDeadline : room.startDeadline - next * 1000;
+  }
+
+  /**
+   * Run whatever the countdown owes by now: announce the minute / last-10-seconds reminders, and when the time is
+   * up pass the host role to a random other player who is in the waiting room. Returns true when something changed.
+   */
+  tickStart(room: Room, isConnected: (uid: string) => boolean = () => true): boolean {
+    if (!this.inLobby(room) || !room.startDeadline) return false;
+    const now = this.now();
+    if (now >= room.startDeadline) {
+      const pool = room.players.filter((p) => !p.isBot && !p.kicked && p.uid !== room.hostUid && isBack(p));
+      const online = pool.filter((p) => isConnected(p.uid));
+      const cands = online.length ? online : pool;
+      if (!cands.length) {
+        this.armStart(room); // nobody to hand the room to: the countdown just starts over
+        return false;
+      }
+      const next = cands[Math.floor(this.rng() * cands.length)]!;
+      room.hostUid = next.uid;
+      next.observer = false; // the host always plays
+      room.lobbyDeadline = null;
+      this.armStart(room);
+      this.systemSay(room, `時間到！房主改由 ${next.nickname} 擔任，倒數重新開始`);
+      this.emit(room, 'ROOM_UPDATED', { newHost: next.uid, reason: 'start-timeout' });
+      return true;
+    }
+    const left = Math.ceil((room.startDeadline - now) / 1000);
+    const due = START_REMIND_AT.filter((t) => left <= t && t < room.startRemind);
+    if (!due.length) return false;
+    const t = Math.min(...due); // several can be overdue after a hiccup: announce only the current one
+    room.startRemind = t;
+    this.systemSay(room, t >= 60 ? `⏱ 開局倒數：還有 ${t / 60} 分鐘，時間到會自動換房主` : `⏱ 開局倒數 ${t}`);
     return true;
   }
 
@@ -438,6 +515,7 @@ export class RoomManager {
       room.hostUid = queued.uid;
       if (queued.observer && room.status !== 'PLAYING') queued.observer = false;
       room.lobbyDeadline = null;
+      this.armStart(room);
       this.emit(room, 'ROOM_UPDATED', { newHost: queued.uid, reason: 'queue' });
       return true;
     }
@@ -452,6 +530,7 @@ export class RoomManager {
     const next = candidates[Math.floor(this.rng() * candidates.length)]!;
     room.hostUid = next.uid;
     if (next.observer && room.status !== 'PLAYING') next.observer = false; // the host always plays
+    this.armStart(room);
     this.emit(room, 'ROOM_UPDATED', { newHost: next.uid });
     return true;
   }
@@ -469,6 +548,7 @@ export class RoomManager {
     room.resultGame = null;
     room.backOrder = [];
     room.lobbyDeadline = null;
+    room.startDeadline = null;
     const active = room.players.filter((p) => !p.observer); // observers watch, they are not in the game
     if (active.length < MIN_PLAYERS) throw new GameError('NOT_ENOUGH_PLAYERS', '至少需要 2 位參賽玩家（觀察者不算）');
     const order = active.slice();
@@ -739,9 +819,10 @@ export class RoomManager {
     this.rooms.clear();
     this.sessions.clear();
     for (const r of data.rooms) {
-      const room: Room = { ...r, deckCopies: r.deckCopies ?? 1, allowConsecutive: r.allowConsecutive ?? true, chat: r.chat ?? [], chatSeq: r.chatSeq ?? 0, backOrder: r.backOrder ?? [], lobbyDeadline: r.lobbyDeadline ?? null, game: r.game ? Game.restore(r.game, { rng: this.rng }) : null, resultGame: r.resultGame ? Game.restore(r.resultGame, { rng: this.rng }) : null };
+      const room: Room = { ...r, deckCopies: r.deckCopies ?? 1, allowConsecutive: r.allowConsecutive ?? true, chat: r.chat ?? [], chatSeq: r.chatSeq ?? 0, backOrder: r.backOrder ?? [], lobbyDeadline: r.lobbyDeadline ?? null, startDeadline: r.startDeadline ?? null, startRemind: r.startRemind ?? 9999, game: r.game ? Game.restore(r.game, { rng: this.rng }) : null, resultGame: r.resultGame ? Game.restore(r.resultGame, { rng: this.rng }) : null };
       delete (room as unknown as { passwordHash?: string }).passwordHash; // passwords were removed
       this.rooms.set(room.roomId, room);
+      if (this.inLobby(room) && !room.startDeadline) this.armStart(room); // saves from before the countdown existed
     }
     for (const [sid, b] of data.sessions) this.sessions.set(sid, b);
   }
@@ -809,6 +890,7 @@ export class RoomManager {
   private cleanNickname(n: unknown): string {
     const s = typeof n === 'string' ? n.trim() : '';
     if (!s || s.length > 12) throw new GameError('BAD_NICKNAME', '暱稱需為 1–12 字');
+    if (s.normalize('NFKC').replace(/\s+/g, '').toLowerCase() === SYSTEM_NAME.toLowerCase()) throw new GameError('BAD_NICKNAME', '「System」是系統保留名稱，請換一個');
     return s;
   }
 

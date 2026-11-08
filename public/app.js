@@ -357,7 +357,7 @@ function updateLobby() {
     const stick = L.chatKey === '' || el.scrollHeight - el.scrollTop - el.clientHeight < 28;
     L.chatKey = key;
     el.replaceChildren(...(chat.length
-      ? chat.map((c) => h('div', { class: 'chatmsg' + (c.uid === s.me ? ' mine' : '') }, h('b', {}, c.nickname), '：', c.text)) // text nodes only: never HTML
+      ? chat.map((c) => h('div', { class: 'chatmsg' + (c.uid === s.me ? ' mine' : '') + (c.uid === 'system' ? ' sys' : '') }, h('b', {}, c.nickname), '：', c.text)) // text nodes only: never HTML
       : [h('div', { class: 'muted' }, '還沒有人說話，打個招呼吧')]));
     if (stick) el.scrollTop = el.scrollHeight;
   }

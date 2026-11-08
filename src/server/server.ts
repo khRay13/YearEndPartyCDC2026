@@ -21,6 +21,8 @@ export interface HubOptions {
   pauseMs?: { pass: number; shot: number; extra: number };
   /** Delay before a computer-controlled player acts. */
   botDelayMs?: number;
+  /** How long the host has to start the game before the role passes to a random player (default 5 minutes). */
+  startLimitMs?: number;
   /** How long the host has to come back after another player did (default 5 minutes). */
   hostReturnMs?: number;
   /** Delay between computer turns once no live human remains. */
@@ -58,7 +60,7 @@ export class Hub {
       roomIdleMs: opts.roomIdleMs ?? ROOM_IDLE_MS,
       sweepMs: opts.sweepMs ?? 60_000,
     };
-    this.manager = new RoomManager({ hostReturnMs: opts.hostReturnMs });
+    this.manager = new RoomManager({ hostReturnMs: opts.hostReturnMs, startLimitMs: opts.startLimitMs });
     this.sweepTimer = setInterval(() => this.sweepRooms(), this.opts.sweepMs);
     this.sweepTimer.unref();
     if (this.opts.stateFile && existsSync(this.opts.stateFile)) {
@@ -70,6 +72,7 @@ export class Hub {
             this.schedule(room);
           }
           this.scheduleHostTimer(room);
+          this.scheduleStartTimer(room);
         }
         console.log(`[hub] restored ${this.manager.rooms.size} room(s)`);
       } catch (e) {
@@ -84,7 +87,7 @@ export class Hub {
   sweepRooms(): string[] {
     const removed = this.manager.sweep((sid) => this.isConnected(sid), this.opts.roomIdleMs);
     for (const id of removed) {
-      for (const m of [this.timers, this.hostTimers, this.broadcastTimers]) {
+      for (const m of [this.timers, this.hostTimers, this.broadcastTimers, this.startTimers]) {
         const t = m.get(id);
         if (t) clearTimeout(t);
         m.delete(id);
@@ -376,6 +379,25 @@ export class Hub {
     );
   }
 
+  private startTimers = new Map<string, NodeJS.Timeout>();
+
+  /** (Re)arm the waiting-room countdown clock: minute reminders, the last 10 seconds, then the host hand-over. */
+  scheduleStartTimer(room: Room): void {
+    const old = this.startTimers.get(room.roomId);
+    if (old) clearTimeout(old);
+    this.startTimers.delete(room.roomId);
+    const at = this.manager.nextStartTickAt(room);
+    if (at === null) return;
+    this.startTimers.set(
+      room.roomId,
+      setTimeout(() => {
+        this.startTimers.delete(room.roomId);
+        if (this.manager.tickStart(room, (uid) => this.isConnected(room.players.find((p) => p.uid === uid)?.sid ?? null))) this.after(room);
+        else this.scheduleStartTimer(room);
+      }, Math.max(0, at - Date.now())),
+    );
+  }
+
   private broadcastTimers = new Map<string, NodeJS.Timeout>();
 
   /** Coalesce broadcasts (fast-forward); a finished match is announced immediately. */
@@ -410,6 +432,7 @@ export class Hub {
   }
 
   private after(room: Room): void {
+    this.scheduleStartTimer(room);
     this.broadcast(room);
     this.persist();
   }
@@ -455,6 +478,8 @@ export class Hub {
     this.broadcastTimers.clear();
     for (const t of this.hostTimers.values()) clearTimeout(t);
     this.hostTimers.clear();
+    for (const t of this.startTimers.values()) clearTimeout(t);
+    this.startTimers.clear();
     if (this.saveTimer) clearTimeout(this.saveTimer);
   }
 }

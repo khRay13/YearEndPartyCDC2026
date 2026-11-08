@@ -318,6 +318,8 @@ input { -webkit-user-select: text; user-select: text; }
 .chatmsg { overflow-wrap: anywhere; }
 .chatmsg b { color: var(--gold); font-weight: 700; }
 .chatmsg.mine b { color: var(--green); }
+.chatmsg.sys { color: #ffd98a; }
+.chatmsg.sys b { color: #ff9f43; }
 .chatform { display: flex; gap: 8px; margin-top: 8px; }
 .chatform .chatin { flex: 1 1 auto; min-width: 0; }
 
