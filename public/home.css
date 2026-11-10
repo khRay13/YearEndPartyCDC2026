@@ -1,0 +1,299 @@
+/* CDC 2026 尾牙 — festival home page. Vermilion paper, gold ink, 丁未羊年. */
+:root {
+  --red: #b3171f;
+  --red-page: #8a1017;
+  --red-deep: #5a0a10;
+  --gold: #f0c05a;
+  --gold-dim: #c9983a;
+  --paper: #f8e9c8;
+  --ink: #2a0e0b;
+  --serif: "Noto Serif TC", "Songti TC", "PMingLiU", "Noto Serif CJK TC", serif;
+  --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--red-page);
+  color: var(--paper);
+  font: 400 16px/1.7 var(--sans);
+  touch-action: manipulation;
+}
+
+/* a poster border: a gold line inside the edge, like a New Year print */
+.frame {
+  position: relative;
+  margin: 10px;
+  min-height: calc(100vh - 20px);
+  min-height: calc(100svh - 20px);
+  display: flex; flex-direction: column;
+  padding: 20px 16px 22px;
+  border: 2px solid var(--gold);
+  outline: 1px solid var(--gold-dim);
+  outline-offset: 5px;
+  overflow: hidden;
+}
+
+/* ---------- hero ---------- */
+.hero { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+
+.plaque {
+  margin: 4px 0 0;
+  padding: 6px 22px 6px 28px; /* the letter-spacing adds trailing space; balance it */
+  background: var(--red-deep);
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 0 3px var(--red-page), 0 0 0 4px var(--gold-dim);
+  color: var(--gold);
+  font: 900 20px/1.3 var(--serif);
+  letter-spacing: .4em;
+}
+
+/* phones: the picture on top, the two couplets side by side under it */
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "pic pic" "up down";
+  gap: 12px 10px;
+  width: 100%;
+  max-width: 760px;
+  margin-top: 18px;
+}
+.enter { grid-area: pic; justify-self: center; display: block; max-width: 100%; line-height: 0; border-radius: 8px; -webkit-tap-highlight-color: transparent; transition: transform .2s ease; }
+.enter:hover { transform: translateY(-3px); }
+.enter:active { transform: translateY(1px); }
+.goat {
+  /* limited by width on phones and by the window height on big screens, so the whole page fits in one view */
+  display: block; width: auto; max-width: 100%; height: auto; max-height: min(44vh, 480px);
+  border: 2px solid var(--gold); border-radius: 6px;
+  box-shadow: 0 0 0 4px var(--red-page), 0 0 0 5px var(--gold-dim);
+  background: var(--red);
+}
+
+/* the two couplets: 上聯 left, 下聯 right */
+.couplet {
+  margin: 8px 0 0;
+  padding: 8px 6px;
+  background: var(--red-deep);
+  border: 1.5px solid var(--gold);
+  color: var(--gold);
+  font: 900 15px/1.4 var(--serif);
+  letter-spacing: .1em;
+  text-align: center;
+}
+.couplet.up { grid-area: up; }
+.couplet.down { grid-area: down; }
+
+.title { margin: 20px 0 0; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.title-sub { font: 700 16px/1.4 var(--sans); letter-spacing: .3em; color: var(--paper); opacity: .85; }
+.title-main {
+  font: 900 clamp(46px, 15vw, 84px)/1.15 var(--serif);
+  letter-spacing: .08em;
+  color: var(--gold);
+  text-shadow: 3px 3px 0 var(--ink);
+}
+.lead { margin: 6px 0 0; font: 500 17px/1.6 var(--sans); color: var(--paper); }
+.tap { margin: 14px 0 0; padding: 6px 18px; border: 1.5px solid var(--gold-dim); border-radius: 999px; color: var(--gold); font: 700 15px/1.6 var(--sans); }
+
+/* the lobby page */
+.lobby-page .plaque { margin-top: 4px; font-size: 22px; }
+.lobby-lead { margin: 14px 0 22px; }
+.lobby-page .cards { width: 100%; max-width: 720px; }
+.back { margin-top: 24px; min-height: 44px; display: inline-flex; align-items: center; color: var(--paper); text-decoration: underline; text-underline-offset: 4px; }
+
+/* lanterns hang in the top corners; they drop in once */
+.lantern { position: absolute; top: -20px; width: 56px; height: 112px; overflow: visible; transform-origin: 50% 0; animation: drop .9s cubic-bezier(.3, 1.4, .5, 1) both; filter: drop-shadow(0 0 5px rgba(255, 150, 50, .5)) drop-shadow(0 0 12px rgba(255, 100, 30, .25)); }
+/* it hangs from the hook at the top and swings a few degrees; the two are out of step */
+.lantern use { transform-origin: 32px 0; animation: sway 3.8s ease-in-out infinite alternate; }
+.l2 use { animation-delay: -1.9s; }
+@keyframes sway { from { transform: rotate(-4.5deg); } to { transform: rotate(4.5deg); } }
+.l1 { left: 2px; }
+.l2 { right: 2px; animation-delay: .15s; }
+@keyframes drop { from { transform: translateY(-110px); } to { transform: none; } }
+
+/* ---------- game lobby ---------- */
+.sect {
+  display: flex; align-items: center; gap: 14px;
+  margin: 0 0 16px;
+  font: 900 24px/1.3 var(--serif);
+  color: var(--gold);
+}
+.sect::before, .sect::after { content: ""; flex: 1; height: 0; border-top: 2px solid var(--gold-dim); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; align-items: stretch; }
+
+/* red envelope: a darker flap on top, a gold seal where the flap ends */
+.hongbao {
+  position: relative; display: block; min-height: 230px;
+  background: var(--red); color: var(--paper); text-decoration: none;
+  border: 2px solid var(--gold); border-radius: 10px 10px 18px 18px;
+  overflow: hidden;
+  box-shadow: 0 6px 0 var(--red-deep);
+  -webkit-tap-highlight-color: transparent;
+}
+.hongbao .flap { position: absolute; inset: 0 0 auto 0; height: 96px; background: var(--red-deep); clip-path: polygon(0 0, 100% 0, 100% 30%, 50% 100%, 0 30%); }
+.hongbao .seal {
+  position: absolute; top: 58px; left: 50%; translate: -50% 0;
+  display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%;
+  background: var(--gold); color: var(--red); border: 2px solid var(--red-deep);
+  font: 900 28px/1 var(--serif);
+}
+.hongbao .hb-body { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 124px 18px 20px; text-align: center; }
+.hb-name { font: 900 30px/1.2 var(--serif); color: var(--gold); letter-spacing: .12em; }
+.hb-text { font-size: 15px; line-height: 1.6; max-width: 20em; }
+.hb-go {
+  margin-top: 8px; padding: 10px 26px; min-height: 44px;
+  background: var(--gold); color: var(--ink); border-radius: 999px;
+  font: 700 17px/1.6 var(--sans);
+}
+.hongbao:hover .hb-go { background: var(--paper); }
+.hongbao:active { translate: 0 3px; box-shadow: 0 3px 0 var(--red-deep); }
+
+/* not there yet: a dashed paper-cut outline */
+.soon {
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px;
+  min-height: 150px; padding: 18px; text-align: center;
+  border: 2px dashed var(--gold-dim); border-radius: 4px;
+  color: var(--paper); opacity: .8;
+}
+.soon-name { font: 900 22px/1.3 var(--serif); color: var(--gold); }
+.soon-text { font-size: 15px; }
+
+.foot { margin-top: 18px; text-align: center; font: 700 18px/1.6 var(--serif); letter-spacing: .2em; color: var(--gold); }
+.foot p { margin: 0; }
+
+a:focus-visible { outline: 3px solid var(--paper); outline-offset: 3px; }
+.enter:focus-visible { outline-offset: 6px; }
+
+/* ---------- wider screens ---------- */
+@media (min-width: 640px) {
+  .frame { margin: 16px; padding: 28px 28px 40px; min-height: calc(100vh - 32px); }
+  .plaque { font-size: 26px; padding: 8px 28px 8px 36px; }
+  .stage { margin-top: 26px; }
+  .couplet { font-size: 18px; padding: 10px 8px; }
+  .lantern { width: 92px; height: 184px; top: -34px; }
+  .l1 { left: 16px; }
+  .l2 { right: 16px; }
+  .title { margin-top: 28px; }
+  .title-sub { font-size: 20px; }
+  .lead { font-size: 20px; }
+}
+
+@media (min-width: 960px) {
+  .stage { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "up pic down"; align-items: center; gap: 24px; max-width: 1000px; }
+  .couplet { margin: 0; padding: 18px 12px; font-size: 26px; line-height: 1.4; writing-mode: vertical-rl; text-orientation: upright; letter-spacing: .16em; }
+}
+
+/* ---------- the home page is exactly one screen: it never scrolls, whatever the window ----------
+   The frame is as tall as the window; the picture takes the height that is left and shrinks to fit; type sizes
+   follow the window height; secondary lines drop out when the window is short. */
+html:has(body.onepage), body.onepage { height: 100%; overflow: hidden; }
+body.onepage { min-height: 0; height: 100vh; height: 100dvh; }
+.onepage .frame { height: calc(100vh - 20px); height: calc(100dvh - 20px); min-height: 0; padding-top: clamp(10px, 2.6vh, 24px); padding-bottom: clamp(8px, 2vh, 20px); }
+.onepage .hero { min-height: 0; justify-content: flex-start; }
+.onepage .plaque { flex: none; font-size: clamp(16px, 2.6vh, 26px); padding: .25em .7em .25em 1em; }
+.onepage .stage { flex: 1 1 0; min-height: 0; margin-top: clamp(8px, 2vh, 26px); grid-template-rows: minmax(0, 1fr) auto; gap: clamp(6px, 1.4vh, 12px) 10px; }
+.onepage .enter { align-self: stretch; min-width: 0; min-height: 0; max-height: 100%; display: flex; justify-content: center; align-items: center; }
+.onepage .goat { max-width: 100%; max-height: min(100%, 560px); width: auto; height: auto; object-fit: contain; }
+.onepage .couplet { margin-top: 0; padding: clamp(4px, .9vh, 8px) 6px; font-size: clamp(13px, 2.2vh, 18px); }
+.onepage .title { flex: none; margin-top: clamp(6px, 2vh, 28px); }
+.onepage .title-sub { font-size: clamp(13px, 2.2vh, 20px); }
+.onepage .title-main { font-size: clamp(34px, min(15vw, 10vh), 84px); }
+.onepage .lead { flex: none; margin-top: 2px; font-size: clamp(14px, 2.2vh, 20px); }
+.onepage .tap { flex: none; margin-top: clamp(6px, 1.6vh, 14px); padding: .25em 1.2em; font-size: clamp(13px, 2vh, 16px); }
+.onepage .foot { flex: none; margin-top: clamp(4px, 1.2vh, 18px); font-size: clamp(13px, 2.2vh, 18px); }
+@media (min-width: 640px) {
+  .onepage .frame { height: calc(100vh - 32px); height: calc(100dvh - 32px); padding-left: 28px; padding-right: 28px; }
+}
+@media (min-width: 960px) {
+  .onepage .stage { grid-template-rows: minmax(0, 1fr); }
+  .onepage .couplet { padding: 14px 10px; font-size: clamp(14px, 3.2vh, 26px); }
+}
+@media (max-height: 640px) { .onepage .couplet { display: none; } }
+@media (max-height: 560px) { .onepage .lead { display: none; } }
+@media (max-height: 440px) { .onepage .tap { display: none; } .onepage .plaque { display: none; } }
+@media (max-width: 340px) { .onepage .plaque { letter-spacing: .25em; } }
+
+/* ---------- the lobby page: one screen as well ---------- */
+.onepage .lobby-page { justify-content: center; }
+.onepage .lobby-page .plaque { margin-top: 0; }
+.onepage .lobby-lead { flex: none; margin: clamp(8px, 2vh, 16px) 0 clamp(8px, 2.4vh, 22px); }
+.onepage .lobby-page .cards { flex: 0 1 clamp(300px, 68vh, 620px); min-height: 0; width: 100%; max-width: 720px; grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: clamp(8px, 1.8vh, 16px); }
+.onepage .hongbao { min-height: 0; height: 100%; display: flex; flex-direction: column; }
+.onepage .hongbao { --seal: clamp(34px, 6.4vh, 54px); --seal-top: clamp(26px, 6.2vh, 58px); }
+.onepage .hongbao .flap { height: clamp(46px, 11vh, 96px); }
+.onepage .hongbao .seal { width: var(--seal); height: var(--seal); top: var(--seal-top); font-size: clamp(18px, 3.4vh, 28px); }
+/* the text starts below the seal, with room to spare, and sits in the middle of what is left */
+.onepage .hongbao .hb-body { flex: 1; min-height: 0; justify-content: center; padding: calc(var(--seal-top) + var(--seal) + 12px) 14px 10px; gap: clamp(2px, .8vh, 6px); }
+.onepage .hb-name { font-size: clamp(22px, 3.8vh, 30px); }
+.onepage .hb-text { font-size: clamp(12px, 1.9vh, 15px); line-height: 1.5; }
+.onepage .hb-go { margin-top: clamp(2px, .8vh, 8px); min-height: 0; padding: clamp(6px, 1vh, 10px) 24px; font-size: clamp(14px, 2.1vh, 17px); line-height: 1.4; }
+.onepage .soon { min-height: 0; padding: 8px; }
+.onepage .soon-name { font-size: clamp(16px, 2.8vh, 22px); }
+.onepage .soon-text { font-size: clamp(12px, 1.9vh, 15px); }
+.onepage .back { flex: none; margin-top: clamp(4px, 1.6vh, 20px); min-height: 40px; }
+.onepage .lobby-page .lantern { z-index: 1; }
+@media (min-width: 640px) {
+  .onepage .lobby-page .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); flex-basis: 340px; }
+}
+@media (max-height: 640px) { .onepage .hb-text { display: none; } }
+@media (max-width: 639px) and (max-height: 780px) { .onepage .hb-text { display: none; } } /* two envelopes stacked: on a short phone the one-line description makes way */
+@media (max-height: 560px) { .onepage .lobby-lead { display: none; } .onepage .soon-text { display: none; } }
+@media (max-height: 460px) { .onepage .lobby-page .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); } }
+
+/* ---------- plum branches, bottom right ----------
+   Two layers hop out of step: a quick jump up, a slow settle, then the next jump. They sit behind the text. */
+.onepage .hero, .onepage .foot { z-index: 1; }
+.onepage .foot { position: relative; }
+.plum { overflow: visible; /* the far branch runs on to the frame instead of ending in a straight cut */ position: absolute; z-index: 0; pointer-events: none; transform-origin: 100% 100%; will-change: transform; animation: hop 1.9s infinite; }
+.plum-front { right: -6px; bottom: -8px; width: clamp(110px, 20vw, 380px); height: auto; --lift: 16px; }
+.plum-back { right: clamp(8px, 3vw, 40px); bottom: clamp(16px, 4vh, 54px); width: clamp(96px, 18vw, 340px); height: auto; opacity: .8; --lift: 10px; animation-delay: .55s; }
+/* phones have no free corner: one small branch tucked in, and the hint pill is opaque so a blossom never shows through it */
+/* phones: both plum layers and a bigger ship stay; the lines of type that run over them get a dark outline, so they
+   read clearly even where a blossom or a wave is behind them */
+@media (max-width: 639px) {
+  /* sizes follow the width and the height: the branch must stay below the lines of type above it */
+  .plum-front { width: clamp(64px, min(34vw, 14.5vh), 170px); }
+  .plum-back { width: clamp(56px, min(29vw, 11.5vh), 150px); right: clamp(8px, 3vw, 18px); bottom: clamp(12px, 2.6vh, 30px); }
+  .onepage .foot { letter-spacing: .1em; }
+  .onepage .foot p, .onepage .lead { text-shadow: 0 0 3px #5a0a10, 0 0 6px #5a0a10, 0 1px 0 #5a0a10; }
+}
+.onepage .tap { background: var(--red-page); }
+@keyframes hop {
+  0% { transform: translateY(0); animation-timing-function: cubic-bezier(.12, .9, .3, 1); }
+  13% { transform: translateY(calc(var(--lift) * -1)); animation-timing-function: cubic-bezier(.4, 0, .6, 1); }
+  100% { transform: translateY(0); }
+}
+
+/* ---------- the ship, bottom left: four paper layers, each with its own rhythm ----------
+   back wave -> middle wave -> ship -> front wave. Every layer slides sideways by exactly one wave length (so the loop
+   has no seam) and rises and falls at its own pace; the ship also rocks. */
+.ship { position: absolute; z-index: 0; pointer-events: none; left: -6px; bottom: -8px; /* never wider than the room left beside the footer line and the big title */
+  width: clamp(90px, min(40vw, 50vh, calc(50vw - 2.4 * clamp(34px, min(15vw, 10vh), 84px) - 20px)), 420px); height: auto;
+  /* the sea fades out towards the middle of the page instead of ending in a straight cut */
+  -webkit-mask-image: linear-gradient(to right, #000 74%, transparent); mask-image: linear-gradient(to right, #000 74%, transparent); }
+.ship .run, .ship .bob, .ship .rock { transform-box: fill-box; will-change: transform; }
+.ship .run { animation-timing-function: linear; animation-iteration-count: infinite; }
+.ship .run-l { animation-name: run-l; }
+.ship .run-r { animation-name: run-r; }
+.ship .sea-back-bob .run { animation-duration: 13s; }
+.ship .sea-mid-bob .run { animation-duration: 9s; }
+.ship .sea-front-bob .run { animation-duration: 6s; }
+.ship .bob { --a: 3px; animation: bob 3s ease-in-out infinite alternate; }
+.ship .sea-back-bob { --a: 2.5px; animation-duration: 3.8s; animation-delay: -1s; }
+.ship .sea-mid-bob { --a: 3.5px; animation-duration: 2.9s; animation-delay: -2s; }
+.ship .sea-front-bob { --a: 5px; animation-duration: 2.3s; animation-delay: -.6s; }
+.ship .rock { transform-origin: 50% 90%; animation: rock 3.2s ease-in-out infinite alternate; }
+@keyframes run-l { to { transform: translateX(calc(var(--p) * -1)); } }
+@keyframes run-r { from { transform: translateX(calc(var(--p) * -1)); } to { transform: translateX(0); } }
+@keyframes bob { from { transform: translateY(var(--a)); } to { transform: translateY(calc(var(--a) * -1)); } }
+@keyframes rock { from { transform: translateY(3px) rotate(-1.8deg); } to { transform: translateY(-4px) rotate(1.8deg); } }
+@media (max-width: 639px) { .ship { width: clamp(90px, min(34vw, 22vh), 170px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .enter { transition: none; }
+  .enter:hover { transform: none; }
+  .lantern, .lantern use, .plum, .ship .run, .ship .bob, .ship .rock { animation: none; }
+  .hongbao:active { translate: none; }
+}

@@ -7,8 +7,10 @@
     "start": "node src/server/server.ts",
     "dev": "node --watch src/server/server.ts",
     "test": "node --test test/",
-    "rwd": "node scripts/rwd-check.mjs",
-    "stability": "node scripts/stability-check.mjs"
+    "rwd": "node test/e2e/rwd-check.mjs",
+    "stability": "node test/e2e/stability-check.mjs",
+    "drawcheck": "node test/e2e/draw-check.mjs",
+    "drawref": "node scripts/make-draw-ref.mjs"
   },
   "dependencies": {
     "ws": "^8.18.3"

@@ -307,6 +307,8 @@ input { -webkit-user-select: text; user-select: text; }
 /* waiting-room buttons: unchanged when they share a line; on phones (where they wrap) the two under 開始遊戲 split that line equally */
 @media (max-width: 480px) { .ctlrow > button:not(.primary) { flex: 1 1 0; } }
 
+.backhome { display: block; margin-top: 14px; text-align: center; text-decoration: underline; min-height: 44px; line-height: 44px; }
+
 /* waiting room: observers, wins, chat */
 .plist li { flex-wrap: wrap; row-gap: 6px; }
 .plist li .who { flex: 1 1 8em; min-width: 0; overflow-wrap: anywhere; }

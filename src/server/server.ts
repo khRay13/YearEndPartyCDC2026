@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { randomBytes } from 'node:crypto';
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, stat } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ import { GameError } from '../engine/game.ts';
 import type { TurnRecord } from '../engine/game.ts';
 import { RoomManager, ROOM_IDLE_MS, TURN_TIME_MS } from './rooms.ts';
 import type { Room } from './rooms.ts';
+import { DrawHub } from '../draw/hub.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(here, '../../public');
@@ -509,7 +510,7 @@ function parseCookies(header: string | undefined): Record<string, string> {
   return out;
 }
 
-export function startServer(opts: HubOptions & { port?: number } = {}) {
+export function startServer(opts: HubOptions & { port?: number; drawLogDir?: string } = {}) {
   const hub = new Hub(opts);
   const secure = process.env.COOKIE_SECURE === '1';
 
@@ -520,21 +521,34 @@ export function startServer(opts: HubOptions & { port?: number } = {}) {
         res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
         return;
       }
-      let rel = url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname);
+      let rel = decodeURIComponent(url.pathname);
+      if (!rel.endsWith('/') && !extname(rel)) {
+        // a folder without its trailing slash (/gate): relative links inside the page need the slash
+        // (leading slashes collapsed: "//host" must never turn into a redirect to another site)
+        res.writeHead(301, { location: '/' + url.pathname.replace(/^\/+/, '') + '/' + url.search }).end();
+        return;
+      }
+      if (rel.endsWith('/')) rel += 'index.html'; // / is the festival home page, /gate/ is the game
       const file = normalize(join(PUBLIC_DIR, rel));
       if (file !== PUBLIC_DIR && !file.startsWith(PUBLIC_DIR + sep)) {
         res.writeHead(403).end('forbidden');
         return;
       }
-      const body = await readFile(file).catch(() => null);
-      if (!body) {
+      const [body, info] = await Promise.all([readFile(file).catch(() => null), stat(file).catch(() => null)]);
+      if (!body || !info) {
         res.writeHead(404).end('not found');
         return;
       }
+      const etag = `W/"${info.size.toString(16)}-${Math.round(info.mtimeMs).toString(16)}"`;
       const headers: Record<string, string> = {
         'content-type': MIME[extname(file)] ?? 'application/octet-stream',
-        'cache-control': 'no-cache',
+        'cache-control': 'no-cache', // always ask, but the answer is a 304 when nothing changed
+        etag,
       };
+      if (req.headers['if-none-match'] === etag && parseCookies(req.headers.cookie).sid) {
+        res.writeHead(304, headers).end(); // (a first visit still gets the full page: it carries the device cookie)
+        return;
+      }
       if (!parseCookies(req.headers.cookie).sid) {
         headers['set-cookie'] =
           `sid=${randomBytes(24).toString('hex')}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000` +
@@ -547,6 +561,9 @@ export function startServer(opts: HubOptions & { port?: number } = {}) {
   });
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
+  // the drawing game: its own rooms on its own socket path, same device cookie
+  const drawHub = new DrawHub({ logDir: opts.drawLogDir });
+  const drawWss = new WebSocketServer({ noServer: true, maxPayload: 65_536 }); // (a bucket fill of a complicated area is a long list of rows)
   http.on('upgrade', (req, socket, head) => {
     const sid = parseCookies(req.headers.cookie).sid;
     if (!sid || !/^[0-9a-f]{48}$/.test(sid)) {
@@ -554,21 +571,25 @@ export function startServer(opts: HubOptions & { port?: number } = {}) {
       socket.destroy();
       return;
     }
-    wss.handleUpgrade(req, socket, head, (ws) => hub.attach(ws, sid));
+    if (new URL(req.url ?? '/', 'http://x').pathname === '/ws/draw') drawWss.handleUpgrade(req, socket, head, (ws) => drawHub.attach(ws, sid));
+    else wss.handleUpgrade(req, socket, head, (ws) => hub.attach(ws, sid));
   });
 
   const port = opts.port ?? Number(process.env.PORT ?? 3000);
-  return new Promise<{ hub: Hub; port: number; close: () => Promise<void> }>((resolveP) => {
+  return new Promise<{ hub: Hub; drawHub: DrawHub; port: number; close: () => Promise<void> }>((resolveP) => {
     http.listen(port, () => {
       const addr = http.address();
       const actual = typeof addr === 'object' && addr ? addr.port : port;
       resolveP({
         hub,
+        drawHub,
         port: actual,
         close: () =>
           new Promise<void>((r) => {
             hub.close();
+            drawHub.close();
             wss.clients.forEach((c) => c.terminate());
+            drawWss.clients.forEach((c) => c.terminate());
             http.close(() => r());
           }),
       });
@@ -577,6 +598,9 @@ export function startServer(opts: HubOptions & { port?: number } = {}) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { port } = await startServer({ stateFile: process.env.STATE_FILE ?? resolve(here, '../../data/state.json') });
+  const { port } = await startServer({
+    stateFile: process.env.STATE_FILE ?? resolve(here, '../../data/state.json'),
+    drawLogDir: process.env.DRAW_LOG_DIR ?? resolve(here, '../../data/draw-results'), // finished 臨摹大賽 games, for calibrating the judge
+  });
   console.log(`射龍門 server listening on http://localhost:${port}`);
 }

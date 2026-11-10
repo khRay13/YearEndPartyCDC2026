@@ -15,8 +15,9 @@ npm run stability   # 用本機 Chrome 檢查「輪到誰」那一區在各種�
 |---|---|
 | `src/engine/` | Phase 1：牌組、判定、遊戲規則（純邏輯） |
 | `src/server/rooms.ts` | Phase 2：房間、密碼、房主、剔除、電腦玩家、操作驗證、持久化 |
+| `src/draw/` | 臨摹大賽（第二款遊戲）：`scoring.ts` 相似度裁判、`rooms.ts` 房間與流程、`hub.ts` WebSocket（`/ws/draw`）；`refs/*.json` 是各張名畫的比對資料，用 `npm run drawref` 重新產生 |
 | `src/server/server.ts` | Phase 3/5：WebSocket、30 秒計時、離線代打、cookie 重連、狀態存檔 |
-| `public/` | Phase 4：手機優先 RWD 介面 |
+| `public/` | 尾牙首頁（`index.html`，一頁式，點羊進大廳）、遊戲大廳 `public/lobby/`、共用樣式 `home.css`；`public/gate/` 是射龍門遊戲（手機優先 RWD 介面），網址 `/gate/` |
 
 ## 環境變數
 - `PORT`（預設 3000）、`STATE_FILE`（預設 `data/state.json`）

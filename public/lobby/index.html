@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <script>document.documentElement.classList.add('loading')</script>
+  <link rel="stylesheet" href="/loading.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#8a1017" />
+  <title>遊戲大廳 高雄CDC 2026 年終尾牙</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" />
+  <link rel="stylesheet" href="/home.css" />
+</head>
+<body class="onepage">
+  <div class="frame">
+    <main class="hero lobby-page">
+      <svg class="lantern l1" viewBox="0 0 64 128" aria-hidden="true">
+        <use href="#lantern" />
+      </svg>
+      <svg class="lantern l2" viewBox="0 0 64 128" aria-hidden="true">
+        <use href="#lantern" />
+      </svg>
+
+      <h1 class="plaque">遊戲大廳</h1>
+      <p class="lead lobby-lead">高雄CDC 2026 年終尾牙，選一個遊戲開始。</p>
+
+      <div class="cards">
+        <!-- 射龍門 is a red envelope -->
+        <a class="hongbao" href="/gate/" data-nav="in">
+          <span class="flap" aria-hidden="true"></span>
+          <span class="seal" aria-hidden="true">福</span>
+          <span class="hb-body">
+            <span class="hb-name">射龍門</span>
+            <span class="hb-text">2 至 12 人同桌，手機就能玩。建立房間，把 6 碼房號告訴同事。</span>
+            <span class="hb-go">進入射龍門</span>
+          </span>
+        </a>
+
+        <!-- 臨摹大賽: two people copy a famous painting, everybody else watches -->
+        <a class="hongbao" href="/draw/" data-nav="in">
+          <span class="flap" aria-hidden="true"></span>
+          <span class="seal" aria-hidden="true">畫</span>
+          <span class="hb-body">
+            <span class="hb-name">臨摹大賽</span>
+            <span class="hb-text">兩人臨摹同一張名畫，3 分鐘後比相似度，其他人當觀眾。</span>
+            <span class="hb-go">進入臨摹大賽</span>
+          </span>
+        </a>
+      </div>
+
+      <a class="back" href="/" data-nav="out">回尾牙首頁</a>
+    </main>
+
+    <footer class="foot">
+      <p>恭賀新禧　萬事如意</p>
+    </footer>
+  </div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <g id="lantern">
+        <circle cx="32" cy="58" r="56" fill="url(#lantern-glow)" />
+        <path d="M32 0v18" stroke="var(--gold)" stroke-width="2" />
+        <rect x="20" y="16" width="24" height="9" rx="2" fill="var(--gold)" />
+        <ellipse cx="32" cy="58" rx="27" ry="34" fill="url(#lantern-body)" stroke="var(--gold)" stroke-width="1.5" />
+        <path d="M32 24c-12 8-14 52 0 68M32 24c12 8 14 52 0 68M32 24c-23 12-25 48 0 68M32 24c23 12 25 48 0 68" fill="none" stroke="#ffd98a" stroke-width="1" opacity=".6" />
+        <rect x="20" y="90" width="24" height="9" rx="2" fill="var(--gold)" />
+        <path d="M32 99v16M26 99v12M38 99v12" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" />
+        <text x="32" y="67" text-anchor="middle" font-family="Noto Serif TC, serif" font-weight="900" font-size="22" fill="#f6d98a">福</text>
+      </g>
+      <radialGradient id="lantern-body" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#f2a64a" /><stop offset=".5" stop-color="#d9532a" /><stop offset="1" stop-color="#9c1118" /></radialGradient>
+      <radialGradient id="lantern-glow"><stop offset="0" stop-color="#ffb347" stop-opacity=".28" /><stop offset=".55" stop-color="#ff7a30" stop-opacity=".1" /><stop offset="1" stop-color="#ff7a30" stop-opacity="0" /></radialGradient>
+    </defs>
+  </svg>
+  <script src="/nav.js" defer></script>
+</body>
+</html>

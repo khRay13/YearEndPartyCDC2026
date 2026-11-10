@@ -118,6 +118,7 @@ function send(obj) {
 setInterval(() => ws && ws.readyState === 1 && send({ t: 'ping' }), 25000);
 
 function onState(s, notice, rejoin) {
+  if (!window.__firstState) { window.__firstState = true; setTimeout(() => document.dispatchEvent(new Event('app-ready')), 0); } // nav.js waits for this
   if (notice) toast(notice);
   if (!s) {
     rejoinRoom = rejoin || null;
@@ -261,7 +262,8 @@ function homeView() {
     h('div', { class: 'col' },
       field('暱稱（1–12 字）', 'nickname', { type: 'text', placeholder: '你的暱稱', maxlength: 12 }),
       homeTab === 'join' && field('房間號碼（6 碼數字）', 'roomId', { type: 'text', inputmode: 'numeric', pattern: '[0-9]*', placeholder: '000000', maxlength: 6 }),
-      h('button', { class: 'primary', onclick: submit }, homeTab === 'create' ? '建立' : '加入')));
+      h('button', { class: 'primary', onclick: submit }, homeTab === 'create' ? '建立' : '加入')),
+    h('a', { class: 'backhome muted', href: '/lobby/', 'data-nav': 'out' }, '回遊戲大廳'));
 }
 
 // ---- waiting room (persistent skeleton: the chat box must keep focus and its draft across server updates) ----

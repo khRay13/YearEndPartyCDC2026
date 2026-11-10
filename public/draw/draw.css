@@ -1,0 +1,122 @@
+/* 臨摹大賽 — on top of the card game's stylesheet (panels, buttons, player list, chat) */
+
+body.painting { padding: 0; overflow: hidden; }
+body.painting main { max-width: none; margin: 0; padding: 0; }
+
+.back { display: inline-block; margin-top: 10px; text-decoration: underline; min-height: 44px; line-height: 44px; }
+
+/* ---- lobby ---- */
+.slot { font-size: 12px; padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+.slot.s0 { background: #e8b44a; color: #2b2100; }
+.slot.s1 { background: #6fb5ff; color: #06223f; }
+.slot.watch { background: rgba(255, 255, 255, .14); color: var(--muted); font-weight: 400; }
+.who-actions { display: flex; gap: 6px; flex-wrap: wrap; width: 100%; }
+.who-actions button { padding: 4px 10px; min-height: 32px; font-size: 13px; }
+.rules { margin: 8px 0 0; padding-left: 1.2em; color: var(--muted); font-size: 14px; }
+.rules li { margin: 2px 0; }
+
+/* ---- waiting for the screens ---- */
+.wait { max-width: 520px; margin: 8vh auto 0; text-align: center; }
+.wait .phone { font-size: 56px; line-height: 1; display: inline-block; animation: tilt 2.4s ease-in-out infinite; }
+@keyframes tilt { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+.wait .need { color: var(--gold); font-weight: 700; margin: 10px 0; }
+.wait .plist { text-align: left; margin-top: 12px; }
+.ok { color: var(--green); font-weight: 700; }
+.no { color: #ffb4ae; font-weight: 700; }
+
+/* ---- painting ---- */
+.dg { height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.dg-top { flex: none; height: 42px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 0 10px; background: rgba(0, 0, 0, .35); border-bottom: 1px solid var(--line); }
+.dg-top .left { font-weight: 700; display: flex; gap: 8px; align-items: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+.dg-top .right { justify-self: end; }
+.dg-top button { padding: 2px 10px; min-height: 30px; font-size: 13px; }
+.timer { font: 700 24px/1 ui-monospace, Menlo, Consolas, monospace; letter-spacing: .04em; }
+.timer.low { color: #ff8a80; }
+.dg-bar { position: absolute; left: 0; bottom: -1px; height: 3px; background: var(--gold); transition: width .3s linear; }
+.dg-top { position: relative; }
+.dg-main { flex: 1; min-height: 0; display: grid; gap: 6px; padding: 6px; }
+/* fr, not %: the gaps between the columns are taken off first, so the three always fit exactly (30/50/20 and 37.5/25/37.5) */
+.dg-player .dg-main { grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 2fr); }
+.dg-watch .dg-main { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) minmax(0, 3fr); }
+.dg-col { min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dg-cap { flex: none; font-size: 13px; color: var(--muted); text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dg-cap b { color: var(--text); }
+.dg-cap .hint { display: none; color: var(--gold); }
+.dg-cap.win b { color: var(--gold); }
+.fit { flex: 1; min-height: 0; width: 100%; position: relative; }
+/* the picture is as big as the column allows, in either direction, and keeps its shape (2:3) */
+.fit > .refimg, .fit > .paper { position: absolute; inset: 0; margin: auto; display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; border-radius: 4px; box-shadow: 0 2px 10px rgba(0, 0, 0, .45); background: #fff; }
+.paper { touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+.dg-watch .paper { cursor: default; }
+
+.dg-tools { gap: 8px; overflow-y: auto; overflow-x: hidden; padding-right: 8px; justify-content: flex-start; padding: 2px; }
+.modes { display: flex; gap: 5px; width: 100%; }
+.modes button { flex: 1; min-height: 34px; padding: 2px; font-size: 13px; white-space: nowrap; }
+.modes button.on { background: var(--gold); color: #2b2100; font-weight: 700; }
+.sizes.off { opacity: .35; pointer-events: none; }
+.paper.bucket { cursor: cell; }
+.dg-tools h4 { margin: 2px 0 0; font-size: 12px; color: var(--muted); font-weight: 400; align-self: flex-start; }
+/* all the tools fit one landscape phone screen: three swatches to a row, the two actions side by side */
+.swatches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; width: 100%; }
+.swatch { aspect-ratio: 1.1; min-height: 0; padding: 0; border-radius: 8px; border: 2px solid rgba(255, 255, 255, .25); font-size: 12px; color: #444; }
+.swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); }
+.sizes { display: flex; gap: 6px; width: 100%; }
+.sizes button { flex: 1; padding: 0; min-height: 34px; display: grid; place-items: center; }
+.sizes button.on { background: var(--gold); }
+.sizes i { display: block; border-radius: 50%; background: currentColor; }
+.acts { display: flex; gap: 5px; width: 100%; }
+.acts button { flex: 1; min-height: 34px; padding: 2px; font-size: 13px; }
+
+.dg-count { position: absolute; inset: 42px 0 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vmin; background: rgba(0, 0, 0, .55); color: var(--gold); text-shadow: 0 4px 0 #2b2100; z-index: 5; }
+.dg-count .num { font: 900 22vmin/1 system-ui, sans-serif; }
+.dg-count .cdhint { font: 700 max(16px, 3.2vmin)/1.4 system-ui, sans-serif; color: #fff; text-shadow: 0 2px 0 #000; text-align: center; padding: 0 16px; }
+
+/* spectators on a tall narrow screen: the reference on top, the two pictures side by side below */
+@media (orientation: portrait) and (max-width: 700px) {
+  .dg-watch .dg-main { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, .8fr) minmax(0, 1.4fr); grid-template-areas: "ref ref" "p0 p1"; }
+  .dg-watch .dg-col.ref { grid-area: ref; }
+  .dg-watch .dg-col.p0 { grid-area: p0; }
+  .dg-watch .dg-col.p1 { grid-area: p1; }
+}
+
+/* ---- result ---- */
+.dg-banner { flex: none; text-align: center; padding: 6px 10px; font-size: 20px; font-weight: 900; color: var(--gold); background: rgba(0, 0, 0, .25); }
+.dg-banner small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
+.dg-foot { flex: none; display: flex; gap: 10px; justify-content: center; padding: 8px; background: rgba(0, 0, 0, .3); border-top: 1px solid var(--line); }
+.score { font: 900 22px/1 system-ui; }
+.score.win { color: var(--gold); }
+
+/* ---- the painter's screen held upright (or on any narrow screen): all canvas ----
+   Top: a slim bar with the clock; the reference is a small thumbnail in the top left corner (a tap opens it, a tap closes it).
+   Middle: the canvas, as big as it can be. Bottom: the tools in two rows. Wide / landscape screens keep the three columns. */
+.dg { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+@media (orientation: portrait), (max-width: 700px) {
+  .dg-player .dg-top { height: 58px; }
+  .dg-player .dg-top .left { visibility: hidden; } /* (it keeps its column, so the clock stays in the middle) */
+  .dg-player .dg-count { inset: 58px 0 0 0; }
+  .dg-player .dg-main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 4px; padding: 4px 4px max(4px, env(safe-area-inset-bottom)); }
+  .dg-player .dg-main > .dg-col:nth-child(2) { grid-row: 1; }
+  .dg-player .dg-main > .dg-col:nth-child(2) .dg-cap { display: none; }
+
+  /* the reference: a thumbnail in the corner of the top bar */
+  .dg-player .dg-col.ref { position: absolute; left: 6px; top: 5px; width: 40px; height: 48px; z-index: 6; padding: 0; gap: 0; cursor: pointer; }
+  .dg-player .dg-col.ref .dg-cap { display: none; }
+  .dg-player .dg-col.ref .fit { width: 100%; height: 100%; flex: none; }
+  .dg-player .dg-col.ref .refimg { box-shadow: 0 0 0 2px var(--gold); }
+  /* ... and opened: the whole screen below the top bar, another tap puts it back */
+  .dg-player .dg-col.ref.big { position: fixed; left: 0; right: 0; top: 58px; bottom: 0; width: auto; height: auto; padding: 10px; background: #041c15; z-index: 30; gap: 6px; }
+  .dg-player .dg-col.ref.big .fit { flex: 1; }
+  .dg-player .dg-col.ref.big .dg-cap { display: block; }
+  .dg-player .dg-col.ref.big .dg-cap .hint { display: inline; }
+  .dg-player .dg-col.ref.big .refimg { box-shadow: 0 2px 14px rgba(0, 0, 0, .6); }
+
+  /* the tools: colours in one row, then pen / bucket, brush sizes, undo / clear */
+  .dg-player .dg-tools { grid-row: 2; flex-direction: row; flex-wrap: wrap; align-items: stretch; justify-content: center; gap: 5px; overflow: visible; padding: 0; }
+  .dg-player .dg-tools h4 { display: none; }
+  .dg-player .swatches { order: 1; flex: 1 1 100%; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+  .dg-player .swatch { aspect-ratio: auto; height: 38px; border-radius: 8px; }
+  .dg-player .modes, .dg-player .sizes, .dg-player .acts { order: 2; flex: 1 1 0; width: auto; min-width: 0; }
+  .dg-player .modes button, .dg-player .acts button, .dg-player .sizes button { min-height: 42px; }
+  .dg-player .lab { display: none; }
+  .dg-player .modes button, .dg-player .acts button { font-size: 18px; }
+}

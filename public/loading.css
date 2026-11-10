@@ -1,0 +1,16 @@
+/* Loading screen shared by every page.
+   A page starts out with <html class="loading"> (set by an inline script in its <head>): the body stays hidden and a
+   gold ring turns on the page colour, with the word Loading under it, until nav.js says the page is ready.
+   No delay: the ring is there from the first paint, so there is never a bare coloured screen. */
+html.loading { background: var(--ld-bg, #8a1017); }
+html.loading body { visibility: hidden; }
+html.loading::after {
+  content: ""; position: fixed; left: 50%; top: 50%; width: 52px; height: 52px; margin: -40px 0 0 -26px;
+  border-radius: 50%; border: 4px solid rgba(240, 192, 90, .25); border-top-color: #f0c05a;
+  animation: ld-spin .8s linear infinite;
+}
+html.loading::before {
+  content: "Loading"; position: fixed; left: 0; right: 0; top: 50%; margin-top: 26px; text-align: center;
+  color: #f0c05a; font: 700 15px/1.4 "Noto Sans TC", system-ui, sans-serif; letter-spacing: .22em;
+}
+@keyframes ld-spin { to { transform: rotate(360deg); } }
